@@ -310,7 +310,12 @@ def main():
         summonerName = names.pop(0).strip()
         print(summonerName + " is current player")
     #summonerName = "ddibwynt"
-        APIKey = ""
+
+        file = open("apikey.txt","r")
+        APIKey = file.readline()
+        file.close()
+        
+
 
         ID  = getSummonerID(summonerName, APIKey)
         games = getGameID(ID, APIKey)
