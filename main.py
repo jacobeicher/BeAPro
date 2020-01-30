@@ -12,15 +12,19 @@ wins = 0
 
 def getSummonerID(summonerName, APIKey):#summonerv4
     URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summonerName + "?api_key=" + APIKey
-    #print (URL)
+    print (URL)
     response = requests.get(URL)
     response = response.json()
     #print(response)
     #print("")
-    return response["accountId"]
+    try:
+        return response["accountId"]
+    except:
+        print(response)
+        sys.exit()
 
 def getGameID(ID, APIKey):#matchv4 420 = ranked 400 = normal draft 700 = clash
-    URL = "https://na1.api.riotgames.com/lol/match/v4/matchlists/by-account/"+ID+"?queue=" + "400" +"&api_key="+APIKey
+    URL = "https://na1.api.riotgames.com/lol/match/v4/matchlists/by-account/"+ID+"?queue=" + "420" +"&api_key="+APIKey
     #print (URL)
     response = requests.get(URL)
     response = response.json()
@@ -32,7 +36,7 @@ def getGameID(ID, APIKey):#matchv4 420 = ranked 400 = normal draft 700 = clash
         daysAgo = (ts - round(response["matches"][lastMatch - x]['timestamp']/1000))/(60*60*24)
         if(daysAgo <= 7):
             gamesGrabbed += 1
-            print(response["matches"][lastMatch - x])
+            #(response["matches"][lastMatch - x])
             print("")
             if(gamesGrabbed == 2):
                 return [g1,response["matches"][lastMatch - x]["gameId"]]
@@ -51,14 +55,17 @@ def getGameData(gameID, APIKey):
 
 def getScore(response, summonerName):
     global wins
+    #print(response)
     for x in range(0,10):
-        if(response["participantIdentities"][x]["player"]["summonerName"]) == summonerName:
+        if(response["participantIdentities"][x]["player"]["summonerName"].lower()) == summonerName.lower():
             playerNumber = x+1
     team = 0 if playerNumber <= 5 else  1
 
     score = 0
     gameTime = round(response["gameDuration"]/60,1) # in mins
     role = response["participants"][playerNumber-1]["timeline"]["lane"]
+
+    #print(response["participants"][playerNumber-1])
 
     #print(response["teams"][team])
     score += response["teams"][team]["baronKills"]/2
@@ -128,44 +135,52 @@ def getScore(response, summonerName):
 
     count = 0
     #xp per min vs opponent
-    for x in range(0,len(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"])*10, 10):
-        if response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0:
-            count +=1
-        else:
-            count += -1
-    if count > 0:
-        score += 1
-
+    try:
+        for x in range(0,round(gameTime-gameTime%10), 10):
+            if response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0:
+                count +=1
+            else:
+                count += -1
+            if count > 0:
+                score += 1
+    except:
+        print("no xp per min data")
     #gold per min
     count = 0
-    for x in range(0,len(response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"])*10, 10):
-        if response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"][str(x)+"-"+str(x+10)] > 450 and role != "Support":
-            count +=1
-        else:
-            count += -1
-    if count > 0:
-        score += 1
-
+    try:
+        for x in range(0,round(gameTime-gameTime%10), 10):
+            if response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"][str(x)+"-"+str(x+10)] > 450 and role != "Support":
+                count +=1
+            else:
+                count += -1
+        if count > 0:
+            score += 1
+    except:
+        print("no gold per min data")
     #cs per min vs opponent
     count = 0
-    for x in range(0,len(response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"])*10, 10):
-        if response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0 and role != "Support":
-            count +=1
-        else:
-            count += -1
-    if count > 0:
-        score += 1
-
+    try:
+        for x in range(0,round(gameTime-gameTime%10), 10):
+            if response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0 and role != "Support":
+                count +=1
+            else:
+                count += -1
+        if count > 0:
+            score += 1
+    except:
+        print("no cs vs opp per min data")
     #cs per min
     count = 0
-    for x in range(0,len(response["participants"][playerNumber-1]["timeline"]["creepsPerMinDeltas"])*10, 10):
-        if response["participants"][playerNumber-1]["timeline"]["creepsPerMinDeltas"][str(x)+"-"+str(x+10)] > 6.5 and role != "Support":
-            count +=1
-    else:
-        count += -1
-    if count >0:
-        score += 1
-
+    try:
+        for x in range(0,round(gameTime-gameTime%10), 10):
+            if response["participants"][playerNumber-1]["timeline"]["creepsPerMinDeltas"][str(x)+"-"+str(x+10)] > 6.5 and role != "Support":
+                count +=1
+        else:
+            count += -1
+        if count >0:
+            score += 1
+    except:
+        print("no cs per min data")
     #print(response["participants"][playerNumber-1])
     print(str(kda) + " as " + str(response["participants"][playerNumber-1]["championId"]))
     print("score as \"champion\" " + str(score))
@@ -230,12 +245,6 @@ def main():
             f.write(input)
         f.close()
 
-    def on_closing2():
-        log.write("closing...")
-        print("closing...")
-        log.close()
-        root2.destroy()
-
     def on_closing():
         print("closing...")
         root.destroy()
@@ -250,27 +259,19 @@ def main():
     weekNum = tk.StringVar()
 
     btn_text.set("Run")
-    #player List and week number
+    #player List
     PlayerFile = tk.Text(root, width=45, height= 20)
-    #weekNumber = tk.Text(root, width=10, height= 1)
 
-    '''if(len(sys.argv) > 1 and ("-specific" in sys.argv[1] or "-s" in sys.argv[1])):
-        with open("players.txt", 'r') as f:
-            PlayerFile.insert(tk.END, f.read())
-    else:'''
     with open("players.txt", 'r') as f:
         PlayerFile.insert(tk.END, f.read())
 
     #labels
-    #if(len(sys.argv) > 1 and ("-specific" in sys.argv[1] or "-s" in sys.argv[1])):
-    #    label = tk.Label(root, text = "The Players to be updated")
-    #else:
     label = tk.Label(root, text = "The Players")
-    #label2 = tk.Label(root, text = "Enter the week number: ")
+
     placeHolder = tk.Label(root, text = "   ")
 
     placeHolder.configure(background='lightgrey')
-    #label2.configure(background='lightgrey')
+
     label.configure(background='lightgrey')
     #buttons
     setPlayers = tk.Button(root, text="Save Changes", command=saveChanges)
@@ -279,14 +280,9 @@ def main():
     label.pack()
     PlayerFile.pack(fill="none", expand=True)
     setPlayers.config(bg = 'lightgrey')
-    #EditPlayers.pack()
     setPlayers.pack()
-    #label2.pack(side=tk.LEFT)
-    #weekNumber.pack(side=tk.LEFT)
-    #placeHolder.pack(side = tk.LEFT)
     btnRun.pack()
 
-    #weekNum = weekNumber.get("1.0",'end-1c')
 
     root.geometry("550x400+200+150")
     if(len(sys.argv) > 1 and ("-auto" in sys.argv[1] or "-a" in sys.argv[1])):
@@ -294,6 +290,7 @@ def main():
 
     root.mainloop()
 
+    # GUI end
 
     row =0
     file = open("players.txt","r")
@@ -309,12 +306,10 @@ def main():
     while(len(names) > 0):
         summonerName = names.pop(0).strip()
         print(summonerName + " is current player")
-    #summonerName = "ddibwynt"
 
         file = open("apikey.txt","r")
-        APIKey = file.readline()
+        APIKey = file.read()
         file.close()
-        
 
 
         ID  = getSummonerID(summonerName, APIKey)
