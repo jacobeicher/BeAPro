@@ -12,7 +12,7 @@ wins = 0
 
 def getSummonerID(summonerName, APIKey):#summonerv4
     URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summonerName + "?api_key=" + APIKey
-    print (URL)
+    #print (URL)
     response = requests.get(URL)
     response = response.json()
     #print(response)
@@ -23,7 +23,7 @@ def getSummonerID(summonerName, APIKey):#summonerv4
         print(response)
         sys.exit()
 
-def getGameID(ID, APIKey):#matchv4 420 = ranked 400 = normal draft 700 = clash
+def getGameID(ID, APIKey):#matchv4 420 = ranked, 400 = normal draft, 700 = clash
     URL = "https://na1.api.riotgames.com/lol/match/v4/matchlists/by-account/"+ID+"?queue=" + "420" +"&api_key="+APIKey
     #print (URL)
     response = requests.get(URL)
@@ -130,10 +130,16 @@ def getScore(response, summonerName):
     if response["participants"][playerNumber-1]["stats"]["firstBloodKill"] or response["participants"][playerNumber-1]["stats"]["firstBloodAssist"] == True:
         score += 1
     #first tower
-    if response["participants"][playerNumber-1]["stats"]["firstTowerKill"] or response["participants"][playerNumber-1]["stats"]["firstTowerAssist"] == True:
-        score += 1
+    try:
+        if response["participants"][playerNumber-1]["stats"]["firstTowerKill"] or response["participants"][playerNumber-1]["stats"]["firstTowerAssist"] == True:
+            score += 1
 
-    count = 0
+    except:
+        print("no towers taken")
+
+
+        count = 0
+
     #xp per min vs opponent
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
@@ -196,7 +202,7 @@ def toSheet(score, score2, data, data2, summonerName, row, record, wb, sheet):
     sheet.write(row,1, record, style)
     sheet.write(row, 2, score+score2, style)
 
-    wb.save("WebScraperResults.xls")
+    wb.save("Results.xls")
 '''#champion and KDA
     sheet.write(row,3, firstKDA + " as " + firstChamp, style)
     sheet.write(row,10, secondKDA + " as " + secondChamp, style)
@@ -314,12 +320,7 @@ def main():
 
         ID  = getSummonerID(summonerName, APIKey)
         games = getGameID(ID, APIKey)
-        #print("games are ")
-        #print (games)
-        #print(games[0])
-        '''for x in range(0,3):
-            print("---------------------------------------------------------------------------------------------------------------------------------------------------------")
-        print("")'''
+
         if(games[0] != "DEFAULT"):
             data = getGameData(games[0], APIKey)
             score = getScore(data, summonerName)
@@ -347,9 +348,10 @@ def main():
         wins = 0
 
     if(platform.system() == "Windows"):
-        os.system("webScraperResults.xls")
+        os.system("Results.xls")
     else:
-        os.system("open webScraperResults.xls")
+        os.system("pwd")
+        os.system("open Results.xls")
 
     print("Program complete")
 
