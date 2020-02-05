@@ -80,6 +80,7 @@ def getScore(response, summonerName):
         kda = (response["participants"][playerNumber-1]["stats"]["kills"] + response["participants"][playerNumber-1]["stats"]["assists"])/response["participants"][playerNumber-1]["stats"]["deaths"]
     else:
         kda = (response["participants"][playerNumber-1]["stats"]["kills"] + response["participants"][playerNumber-1]["stats"]["assists"])
+        score +=1
 
 
     #wins
@@ -120,9 +121,13 @@ def getScore(response, summonerName):
     #vision wards
     if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 3:
         score +=1
+        if role == "Support" and response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 6:
+            score += 1
     #wards placed
-    if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 25:
-        score +=1
+     if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 15:
+            score +=1
+            if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 25:
+                score +=1.5
     #wards killed
     if response["participants"][playerNumber-1]["stats"]["wardsKilled"] >= 20:
         score +=2
@@ -143,7 +148,7 @@ def getScore(response, summonerName):
     #xp per min vs opponent
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
-            if response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0:
+            if response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0 and role != "Support":
                 count +=1
             else:
                 count += -1
@@ -226,8 +231,6 @@ def toSheet(score, score2, data, data2, summonerName, row, record, wb, sheet):
     sheet.write(row,16, "Game Time:" +  str(secondGameTime), style)'''
 
 
-
-
 def main():
     def clear():
         btnRun['highlightbackground'] = 'blue'
@@ -262,7 +265,6 @@ def main():
     root.protocol("WM_DELETE_WINDOW", on_closing)
     root.configure(background='lightgrey')
     btn_text = tk.StringVar()
-    weekNum = tk.StringVar()
 
     btn_text.set("Run")
     #player List
