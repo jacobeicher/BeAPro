@@ -124,10 +124,10 @@ def getScore(response, summonerName):
         if role == "Support" and response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 6:
             score += 1
     #wards placed
-     if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 15:
-            score +=1
-            if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 25:
-                score +=1.5
+    if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 15:
+        score +=1
+        if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 25:
+            score +=1.5
     #wards killed
     if response["participants"][playerNumber-1]["stats"]["wardsKilled"] >= 20:
         score +=2
