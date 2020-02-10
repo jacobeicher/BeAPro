@@ -18,10 +18,13 @@ def getRank(summonerID, APIKey):#league-V4
     response = response.json()
     global LOW
     global HIGH
-    if response[0]['tier'] == "IRON" or response[0]['tier'] == "BRONZE" or response[0]['tier'] == "SILVER" or response[0]['tier'] == "GOLD":
+    try:
+        if response[0]['tier'] == "IRON" or response[0]['tier'] == "BRONZE" or response[0]['tier'] == "SILVER" or response[0]['tier'] == "GOLD":
+            return LOW
+    except:
         return LOW
-
-    return HIGH
+    finally:
+        return HIGH
 
 def getSummonerID(summonerName, APIKey):#summonerv4
     URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summonerName + "?api_key=" + APIKey
@@ -80,7 +83,7 @@ def getScore(response, summonerName, rank):
     gameTime = round(response["gameDuration"]/60,1) # in mins
     role = response["participants"][playerNumber-1]["timeline"]["lane"]
 
-    print(response["participants"][playerNumber-1])
+    #print(response["participants"][playerNumber-1])
 
     #print(response["teams"][team])
     if rank == LOW:
@@ -109,13 +112,13 @@ def getScore(response, summonerName, rank):
         score += 5
         wins +=1
     #killing spree
-    if response["participants"][playerNumber-1]["stats"]["largestKillingSpree"] >= 7 and rank == low or response["participants"][playerNumber-1]["stats"]["largestKillingSpree"] >= 8 and rank == HIGH:
+    if response["participants"][playerNumber-1]["stats"]["largestKillingSpree"] >= 7 and rank == LOW or response["participants"][playerNumber-1]["stats"]["largestKillingSpree"] >= 8 and rank == HIGH:
         score +=1
     #multiKill
     if response["participants"][playerNumber-1]["stats"]["largestMultiKill"] == 5:
         score += 5
     #dmg Per Min - champions
-    if rank == LOW
+    if rank == LOW:
         if response["participants"][playerNumber-1]["stats"]["totalDamageDealtToChampions"]/gameTime >= 1000:
             score += 1
     if rank == HIGH:
@@ -135,15 +138,11 @@ def getScore(response, summonerName, rank):
     #crowd control score
     if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] >= 35:
         score += 1
-        if role == "Support":
-            score +=1.5
         if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] > 55:
             score += 1
-            if role == "Support":
-                score +=1
     #healing
     if response["participants"][playerNumber-1]["stats"]["totalHeal"] >= 2500 and role == "Support":
-            score +=1:
+            score +=1
     #control wards
     if rank == LOW:
         if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 4:
@@ -193,23 +192,35 @@ def getScore(response, summonerName, rank):
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
             if response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0:
-                count +=1
-            else:
-                count += -1
-            if count > 0:
-                score += 1
+                score +=1
+                print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
+            # else:
+            #     count += -1
+            #     print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
+            # if count > 0:
+            #     score += 1
+            #     print("1 point earned for xp per min vs opp ")
     except:
-        print("no xp per min data")
+        print("no xp per min")
+        #xp per min
+        count = 0
+        try:
+            for x in range(0,round(gameTime-gameTime%10), 10):
+                if response["participants"][playerNumber-1]["timeline"]["xpPerMinDeltas"][str(x)+"-"+str(x+10)] >= 450 and role != "Support":
+                    score +=1
+
+        except:
+            print("no xp per min data")
     #gold per min
     count = 0
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
             if response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"][str(x)+"-"+str(x+10)] > 450 and role != "Support":
-                count +=1
-            else:
-                count += -1
-        if count > 0:
-            score += 1
+                score +=1
+        #     else:
+        #         count += -1
+        # if count > 0:
+        #     score += 1
     except:
         print("no gold per min data")
     #cs per min vs opponent
@@ -218,21 +229,24 @@ def getScore(response, summonerName, rank):
         for x in range(0,round(gameTime-gameTime%10), 10):
             if response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0 and role != "Support":
                 count +=1
+                response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)]
             else:
                 count += -1
+                response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)]
         if count > 0:
             score += 2
+            print("2 points earned for cs per min vs opp ")
     except:
-        print("no cs vs opp per min data")
-    # #cs per min
-    # count = 0
-    # try:
-    #     for x in range(0,round(gameTime-gameTime%10), 10):
-    #         if response["participants"][playerNumber-1]["timeline"]["creepsPerMinDeltas"][str(x)+"-"+str(x+10)] > 6.5 and role != "Support":
-    #             score +=1
+        print("no CS per min vs opp")
+        #cs per min
+        count = 0
+        try:
+            for x in range(0,round(gameTime-gameTime%10), 10):
+                if response["participants"][playerNumber-1]["timeline"]["creepsPerMinDeltas"][str(x)+"-"+str(x+10)] > 6.5 and role != "Support":
+                    score +=1
 
-    # except:
-        # print("no cs per min data")
+        except:
+            print("no cs per min data")
     #print(response["participants"][playerNumber-1])
     print(str(kda) + " as " + str(response["participants"][playerNumber-1]["championId"]))
     print("score as \"champion\" " + str(score))

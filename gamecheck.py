@@ -64,9 +64,15 @@ def getScore(response, summonerName, rank):
     score = 0
     gameTime = round(response["gameDuration"]/60,1) # in mins
     role = response["participants"][playerNumber-1]["timeline"]["lane"]
+    if role == "BOTTOM":
+        if response["participants"][playerNumber-1]["timeline"]["role"] == "SOLO" or response["participants"][playerNumber-1]["timeline"]["role"] == "DOU_SUPPORT":
+            role = "Support"
+        else:
+            role = "ADC"
 
     #print(response["participants"][playerNumber-1])
-
+    
+    print(role)
     #print(response["teams"][team])
     if rank == LOW:
         score += response["teams"][team]["baronKills"]/2
@@ -136,15 +142,9 @@ def getScore(response, summonerName, rank):
     if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] >= 35:
         score += 1
         print("1 point earned for cc score")
-        if role == "Support":
-            score +=1.5
-            print("1.5 support points earned for cc score")
         if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] > 55:
             score += 1
             print("1 point earned for big cc score ")
-            if role == "Support":
-                score +=1
-                print("1 support point earned for big cc score")
     #healing    
     if response["participants"][playerNumber-1]["stats"]["totalHeal"] >= 2500 and role == "Support":
             score +=1
@@ -207,52 +207,75 @@ def getScore(response, summonerName, rank):
         count = 0
 
     #xp per min vs opponent
+
+    #print(response["participants"][playerNumber-1]["timeline"])
+
+
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
             if response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0:
-                count +=1
-            else:
-                count += -1
-            if count > 0:
-                score += 1
-                print("1 point earned for xp per min vs opp ")
+                score +=1
+                print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
+            # else:
+            #     count += -1
+            #     print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
+            # if count > 0:
+            #     score += 1
+            #     print("1 point earned for xp per min vs opp ")
     except:
-        tmp = ''
+        print("no xp per min")
+        #xp per min
+        count = 0
+        try:
+            for x in range(0,round(gameTime-gameTime%10), 10):
+                if response["participants"][playerNumber-1]["timeline"]["xpPerMinDeltas"][str(x)+"-"+str(x+10)] >= 450 and role != "Support":
+                    score +=1
+                    print("1 point for xp per min")
+
+        except:
+            print("no xp per min data")
     #gold per min
     count = 0
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
-            if response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"][str(x)+"-"+str(x+10)] > 450 and role != "Support":
-                count +=1
-            else:
-                count += -1
-        if count > 0:
-            score += 1
-            print("1 point earned for gold per min ")
+            if response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"][str(x)+"-"+str(x+10)] > 425 and role != "Support":
+                score +=1
+                print(response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"][str(x)+"-"+str(x+10)])
+            # else:
+            #     count += -1
+            #     print(response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"][str(x)+"-"+str(x+10)])
+        #if count > 0:
+            #score += 1
+            #print("1 point earned for gold per min ")
     except:
-        tmp = ''
+        print('no gold per min')
     #cs per min vs opponent
     count = 0
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
             if response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0 and role != "Support":
                 count +=1
+                response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)]
             else:
                 count += -1
+                response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)]
         if count > 0:
             score += 2
             print("2 points earned for cs per min vs opp ")
     except:
-        tmp = ''
-    # #cs per min
-    # count = 0
-    # try:
-    #     for x in range(0,round(gameTime-gameTime%10), 10):
-    #         if response["participants"][playerNumber-1]["timeline"]["creepsPerMinDeltas"][str(x)+"-"+str(x+10)] > 6.5 and role != "Support":
-    #             score +=1
+        print("no CS per min vs opp")
+        #cs per min
+        count = 0
+        try:
+            for x in range(0,round(gameTime-gameTime%10), 10):
+                if response["participants"][playerNumber-1]["timeline"]["creepsPerMinDeltas"][str(x)+"-"+str(x+10)] >= 6.5 and role != "Support":
+                    score +=1
+                    print("1 point for cs per min")
 
-    # except:
-        # print("no cs per min data")
+        except:
+            print("no cs per min data")
+     
+           
     #print(response["participants"][playerNumber-1])
     #print(str(kda) + " as " + str(response["participants"][playerNumber-1]["championId"]))
     #print("score as \"champion\" " + str(score))
@@ -269,25 +292,34 @@ def main():
 
     print("which game do you want? (1 for most recent game, 2 ect)")
     offSet = input()
-    print(summonerName + " is current player")
 
-    file = open("apikey.txt","r")
-    APIKey = file.read()
-    file.close()
+    if offSet.find('-') >= 0:
+        start = int(offSet[0:offSet.find('-')])
+        end = int(offSet[offSet.find('-')+1:])
+    else:
+        start = int(offSet)
+        end = int(offSet)
+    
+    for x in range(start, end+1):
+        print(summonerName + " is current player")
 
-    ids = getSummonerID(summonerName, APIKey)
+        file = open("apikey.txt","r")
+        APIKey = file.read()
+        file.close()
 
-    accountID  = ids[0]
-    summonerID = ids[1]
-    rank = getRank(summonerID, APIKey)
-    games = getGameID(accountID, APIKey, int(offSet) - 1)
+        ids = getSummonerID(summonerName, APIKey)
 
- 
-    data = getGameData(games[0], APIKey)
-    score = getScore(data, summonerName, rank)
+        accountID  = ids[0]
+        summonerID = ids[1]
+        rank = getRank(summonerID, APIKey)
+        games = getGameID(accountID, APIKey, int(x) - 1)
+
+    
+        data = getGameData(games[0], APIKey)
+        score = getScore(data, summonerName, rank)
 
 
-    print("score is " + str(score))
+        print("score is " + str(score))
 
     #print("Program complete")
 
