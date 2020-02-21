@@ -23,8 +23,8 @@ def getRank(summonerID, APIKey):#league-V4
             return LOW
     except:
         return LOW
-    finally:
-        return HIGH
+    
+    return HIGH
 
 def getSummonerID(summonerName, APIKey):#summonerv4
     URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summonerName + "?api_key=" + APIKey
@@ -46,11 +46,15 @@ def getGameID(ID, APIKey, offSet):#matchv4 420 = ranked, 400 = normal draft, 700
     response = response.json()
     return [response["matches"][offSet]["gameId"],"DEFAULT"]
 
-def getGameData(gameID, APIKey):
+def getGameData(gameID, APIKey):#match v4
     URL = "https://na1.api.riotgames.com/lol/match/v4/matches/" + str(gameID) +"?api_key=" + APIKey
     response = requests.get(URL)
     return response.json()
 
+def getGameTimeline(gameID, APIKey):#match v4-timeline
+    URL = "https://na1.api.riotgames.com/lol/match/v4/timelines/by-match/" + str(gameID) +"?api_key=" + APIKey
+    response = requests.get(URL)
+    print(response.json())
 
 def getScore(response, summonerName, rank):
     global wins
@@ -62,17 +66,20 @@ def getScore(response, summonerName, rank):
     team = 0 if playerNumber <= 5 else  1
 
     score = 0
+    print(response["participants"][playerNumber-1]["timeline"])
     gameTime = round(response["gameDuration"]/60,1) # in mins
     role = response["participants"][playerNumber-1]["timeline"]["lane"]
     if role == "BOTTOM":
-        if response["participants"][playerNumber-1]["timeline"]["role"] == "SOLO" or response["participants"][playerNumber-1]["timeline"]["role"] == "DOU_SUPPORT":
+        if (response["participants"][playerNumber-1]["timeline"]["role"] == "SOLO" or response["participants"][playerNumber-1]["timeline"]["role"] == "DOU_SUPPORT") and response["participants"][playerNumber-1]["stats"]["totalMinionsKilled"]/gameTime < 3:
             role = "Support"
         else:
             role = "ADC"
-
+    elif role == "NONE":
+        role ="Jungle"
     #print(response["participants"][playerNumber-1])
     
     print(role)
+    print("rank is " +  str(rank))
     #print(response["teams"][team])
     if rank == LOW:
         score += response["teams"][team]["baronKills"]/2
@@ -187,7 +194,8 @@ def getScore(response, summonerName, rank):
             score +=1
             print("1 support point earned for killing 25 wards")
     #first blood
-    if response["participants"][playerNumber-1]["stats"]["firstBloodKill"] or response["participants"][playerNumber-1]["stats"]["firstBloodAssist"] == True:
+    
+    if response["participants"][playerNumber-1]["stats"]["firstBloodKill"] or response["participants"][playerNumber-1]["stats"]["firstBloodAssist"]:
         if rank == LOW:
             score += 1
             print("1 point earned for first blood")
@@ -208,14 +216,13 @@ def getScore(response, summonerName, rank):
 
     #xp per min vs opponent
 
-    #print(response["participants"][playerNumber-1]["timeline"])
-
+    print(response["participants"][playerNumber-1]["timeline"])
 
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
             if response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0:
                 score +=1
-                print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
+                print("1 point for xp per min vs opp")
             # else:
             #     count += -1
             #     print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
@@ -228,7 +235,7 @@ def getScore(response, summonerName, rank):
         count = 0
         try:
             for x in range(0,round(gameTime-gameTime%10), 10):
-                if response["participants"][playerNumber-1]["timeline"]["xpPerMinDeltas"][str(x)+"-"+str(x+10)] >= 450 and role != "Support":
+                if response["participants"][playerNumber-1]["timeline"]["xpPerMinDeltas"][str(x)+"-"+str(x+10)] >= 450:
                     score +=1
                     print("1 point for xp per min")
 
@@ -314,6 +321,7 @@ def main():
         rank = getRank(summonerID, APIKey)
         games = getGameID(accountID, APIKey, int(x) - 1)
 
+        print(games[0])
     
         data = getGameData(games[0], APIKey)
         score = getScore(data, summonerName, rank)

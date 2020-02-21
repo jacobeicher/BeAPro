@@ -82,7 +82,13 @@ def getScore(response, summonerName, rank):
     score = 0
     gameTime = round(response["gameDuration"]/60,1) # in mins
     role = response["participants"][playerNumber-1]["timeline"]["lane"]
-
+    if role == "BOTTOM":
+        if response["participants"][playerNumber-1]["timeline"]["role"] == "DOU_SUPPORT":
+            role = "Support"
+        else:
+            role = "ADC"
+    elif role == "NONE":
+        role ="Jungle"
     #print(response["participants"][playerNumber-1])
 
     #print(response["teams"][team])
