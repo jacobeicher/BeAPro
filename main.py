@@ -1,4 +1,5 @@
 import requests
+import pymongo
 import time
 import json
 import xlwt
@@ -52,6 +53,7 @@ def getRank(summonerID, APIKey):  # league-V4
         summonerID + "?api_key=" + APIKey
     response = requests.get(URL)
     response = response.json()
+
     global LOW
     global MID
     global HIGH
@@ -366,10 +368,24 @@ def main():
 
     # GUI end
 
+    os.getenv("QUERY_STRING")
+    managerID = sys.stdin.read()
+
+    client = pymongo.MongoClient('mongodb+srv://admin:m7KZRsbDojGGb1H5@be-a-pro-db-yw0no.gcp.mongodb.net/test?retryWrites=true&w=majority')
+    db = client['be-a-pro-db']
+    array = list(db.users.find())     
+    names = []
+
+    for x in array:
+        if x['managerId'] == managerID:
+            names.append(x['ign'])
+            
+
     row = 0
-    file = open("players.txt", "r")
-    names = file.readlines()
-    file.close()
+    #file = open("players.txt", "r")
+    #names = file.readlines()
+    #file.close()
+    print(names)
     global wins
 
     wb = xlwt.Workbook()
