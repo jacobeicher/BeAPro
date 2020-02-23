@@ -9,22 +9,61 @@ import tkinter as tk
 
 
 wins = 0
-LOW = 0
-HIGH = 1
+
+LOW = 'low'
+MID = 'med'
+HIGH = 'high'
+
+scoring = { 
+    'low':{'dragonSoul':0,'baronKills':0,'wardScore':0,'controlWards':0,'controlWardsExtra':0,'wardsPlaced':0,'wardsPlacedExtra':0,
+            'wardsKilled':0,'wardsKilledExtra':0,'kda':0,'kdaExtra':0,'killingSpree':0,
+            'dmgPerMinChampions':0,'dmgPerMinObjectives':0,'crowdcontrollScore':0,'crowdcontrollScoreExtra':0,
+            'expPerMinVsOpp':0,'csPerMinVsOpp':0,'goldPerMinVsOpp':0},
+
+    'lowPoints':{'dragonSoul':0,'baronKills':0,'wardScore':0,'controlWards':0,'controlWardsExtra':0,'wardsPlaced':0,'wardsPlacedExtra':0,
+            'wardsKilled':0,'wardsKilledExtra':0,'firstBlood':0,'firstTower':0,'kda':0,'kdaExtra':0,'killingSpree':0,
+            'pentakill':0,'dmgPerMinChampions':0,'dmgPerMinObjectives':0,'crowdcontrollScore':0,'crowdcontrollScoreExtra':0,
+            'expPerMinVsOpp':0,'csPerMinVsOpp':0,'goldPerMinVsOpp':0,'win':5},
+
+    'med':{'dragonSoul':0,'baronKills':0,'wardScore':0,'controlWards':0,'controlWardsExtra':0,'wardsPlaced':0,'wardsPlacedExtra':0,
+        'wardsKilled':0,'wardsKilledExtra':0,'kda':0,'kdaExtra':0,'killingSpree':0,
+        'dmgPerMinChampions':0,'dmgPerMinObjectives':0,'crowdcontrollScore':0,'crowdcontrollScoreExtra':0,
+        'expPerMinVsOpp':0,'csPerMinVsOpp':0,'goldPerMinVsOpp':0},
+
+    'medPoints':{'dragonSoul':0,'baronKills':0,'wardScore':0,'controlWards':0,'controlWardsExtra':0,'wardsPlaced':0,'wardsPlacedExtra':0,
+        'wardsKilled':0,'wardsKilledExtra':0,'firstBlood':0,'firstTower':0,'kda':0,'kdaExtra':0,'killingSpree':0,
+        'pentakill':0,'dmgPerMinChampions':0,'dmgPerMinObjectives':0,'crowdcontrollScore':0,'crowdcontrollScoreExtra':0,
+        'expPerMinVsOpp':0,'csPerMinVsOpp':0,'goldPerMinVsOpp':0,'win':5},
+
+    'high':{'dragonSoul':0,'baronKills':0,'wardScore':0,'controlWards':0,'controlWardsExtra':0,'wardsPlaced':0,'wardsPlacedExtra':0,
+        'wardsKilled':0,'wardsKilledExtra':0,'kda':0,'kdaExtra':0,'killingSpree':0,
+        'dmgPerMinChampions':0,'dmgPerMinObjectives':0,'crowdcontrollScore':0,'crowdcontrollScoreExtra':0,
+        'expPerMinVsOpp':0,'csPerMinVsOpp':0,'goldPerMinVsOpp':0},
+
+    'highPoints':{'dragonSoul':0,'baronKills':0,'wardScore':0,'controlWards':0,'controlWardsExtra':0,'wardsPlaced':0,'wardsPlacedExtra':0,
+        'wardsKilled':0,'wardsKilledExtra':0,'firstBlood':0,'firstTower':0,'kda':0,'kdaExtra':0,'killingSpree':0,
+        'pentakill':0,'dmgPerMinChampions':0,'dmgPerMinObjectives':0,'crowdcontrollScore':0,'crowdcontrollScoreExtra':0,
+        'expPerMinVsOpp':0,'csPerMinVsOpp':0,'goldPerMinVsOpp':0,'win':5}
+}
+
 
 def getRank(summonerID, APIKey):#league-V4
     URL = "https://na1.api.riotgames.com/lol/league/v4/entries/by-summoner/" + summonerID+ "?api_key=" + APIKey
     response = requests.get(URL)
     response = response.json()
     global LOW
+    global MID
     global HIGH
+    
     try:
-        if response[0]['tier'] == "IRON" or response[0]['tier'] == "BRONZE" or response[0]['tier'] == "SILVER" or response[0]['tier'] == "GOLD":
+        if response[0]['tier'] == "IRON" or response[0]['tier'] == "BRONZE" or response[0]['tier'] == "SILVER":
             return LOW
+        elif response[0]['tier'] == "GOLD" or response[0]['tier'] == "PLATINUM":
+            return MID
+        else:
+            return HIGH
     except:
         return LOW
-    finally:
-        return HIGH
 
 def getSummonerID(summonerName, APIKey):#summonerv4
     URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summonerName + "?api_key=" + APIKey
@@ -72,7 +111,10 @@ def getGameData(gameID, APIKey):
 def getScore(response, summonerName, rank):
     global wins
     global LOW
+    global MID
     global HIGH
+
+    
     #print(response)
     for x in range(0,10):
         if(response["participantIdentities"][x]["player"]["summonerName"].lower()) == summonerName.lower():
@@ -92,8 +134,8 @@ def getScore(response, summonerName, rank):
     #print(response["participants"][playerNumber-1])
 
     #print(response["teams"][team])
-    if rank == LOW:
-        score += response["teams"][team]["baronKills"]/2
+    if response["teams"][team]["baronKills"] >= scoring[rank]['baronKills']:
+        score += scoring[rank+"Points"]['baronKills']
 
             
     #kda
@@ -101,92 +143,69 @@ def getScore(response, summonerName, rank):
         kda = (response["participants"][playerNumber-1]["stats"]["kills"] + response["participants"][playerNumber-1]["stats"]["assists"])/response["participants"][playerNumber-1]["stats"]["deaths"]
     else:
         kda = (response["participants"][playerNumber-1]["stats"]["kills"] + response["participants"][playerNumber-1]["stats"]["assists"])
-        if rank == LOW:
-            score +=1
-    if rank == LOW:
-        if kda >= 3.5:
-            score +=1 
-            if kda >= 4.5:
-                score +=2
-    elif rank == HIGH:
-        if kda >= 3.5:
-            score +=1.5 
-            if kda >= 4.5:
-                score +=3
+        score +=1   
+
+    
+    if kda >= scoring[rank]['kda']:
+            score += scoring[rank+'Points']['kda'] 
+        if kda >= scoring[rank]['kdaExtra']:
+            score +=scoring[rank+'Points']['kdaExtra'] 
+
     #wins
     if(response["participants"][playerNumber-1]["stats"]["win"]):
-        score += 5
+        score += scoring[rank]['wins']
         wins +=1
     #killing spree
-    if response["participants"][playerNumber-1]["stats"]["largestKillingSpree"] >= 7 and rank == LOW or response["participants"][playerNumber-1]["stats"]["largestKillingSpree"] >= 8 and rank == HIGH:
-        score +=1
+    if response["participants"][playerNumber-1]["stats"]["largestKillingSpree"] >= scoring[rank]['killingSpree']:
+        score += scoring[rank+'Points']['killingSpree'] 
     #multiKill
     if response["participants"][playerNumber-1]["stats"]["largestMultiKill"] == 5:
-        score += 5
+        score += scoring[rank+'Points']['pentakill'] 
     #dmg Per Min - champions
-    if rank == LOW:
-        if response["participants"][playerNumber-1]["stats"]["totalDamageDealtToChampions"]/gameTime >= 1000:
-            score += 1
-    if rank == HIGH:
-        if response["participants"][playerNumber-1]["stats"]["totalDamageDealtToChampions"]/gameTime >= 1150:
-            score += 2
+    if response["participants"][playerNumber-1]["stats"]["totalDamageDealtToChampions"]/gameTime >= scoring[rank]['dmgPerMinChampions'] :
+        score += scoring[rank+'Points']['dmgPerMinChampions'] 
+        
     #Dmg per min - objectives
-    if response["participants"][playerNumber-1]["stats"]["damageDealtToObjectives"]/gameTime >= 500:
-        if rank == LOW:
-            score += 1
+    if response["participants"][playerNumber-1]["stats"]["totalDamageDealtToChampions"]/gameTime >= scoring[rank]['dmgPerMinObjectives']:
+            score += scoring[rank+'Points']['dmgPerMinObjectives']
     #vision Score
-    if response["participants"][playerNumber-1]["stats"]["visionScore"] >= 50:
-        score +=1
+    if response["participants"][playerNumber-1]["stats"]["visionScore"] >= scoring[rank]['wardScore']:
+        score += scoring[rank+'Points']['dmgPerMinObjectives']
         if role == "Support":
             score +=1.5
         if response["participants"][playerNumber-1]["stats"]["visionScore"] > 100 and role == "Support":
             score += 1
     #crowd control score
-    if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] >= 35:
-        score += 1
-        if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] > 55:
-            score += 1
+    if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] >= scoring[rank]['crowdcontrolScore']:
+        score +=  scoring[rank+"Points"]['crowdcontrolScore']
+        if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] > scoring[rank]['crowdcontrolScoreExtra']:
+            score += scoring[rank+"Points"]['crowdcontrolScoreExtra']
     #healing
     if response["participants"][playerNumber-1]["stats"]["totalHeal"] >= 2500 and role == "Support":
             score +=1
     #control wards
-    if rank == LOW:
-        if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 4:
-            score +=1
-            if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 6:
-                score += 2
-    if rank == HIGH:
-        if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 4:
-            score +=1
-            if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 7:
-                score += 2
+    if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= scoring[rank]['controlWards']:
+        score +=scoring[rank+"Points"]['controlWards']
+        if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= scoring[rank]['controlWardsExtra']:
+            score += scoring[rank+"Points"]['controlWardsExtra']
     #wards placed
     
-    if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 15:
-        score +=1
-    if rank == LOW:
-        if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 25:
-            score +=1.5
-    if rank == HIGH:
-        if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 25:
-            score +=2
+    if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= scoring[rank]['wardsPlaced']:
+        score +=scoring[rank+"Points"]['wardsPlaced']
+        if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= scoring[rank]['wardsPlacedExtra']:
+            score +=scoring[rank+"Points"]['wardsPlacedExtra']
     #wards killed
-    if response["participants"][playerNumber-1]["stats"]["wardsKilled"] >= 20:
-        if rank == LOW:
-            score +=2
-        if rank == HIGH:
-            score +=1 
+    if response["participants"][playerNumber-1]["stats"]["wardsKilled"] >= scoring[rank]['wardsKilled']:
+        score +=scoring[rank+"Points"]['wardsKilled']
         if role == "Support" and response["participants"][playerNumber-1]["stats"]["wardsKilled"] >= 25:
             score +=1
     #first blood
     if response["participants"][playerNumber-1]["stats"]["firstBloodKill"] or response["participants"][playerNumber-1]["stats"]["firstBloodAssist"] == True:
-        score += 1
-        if rank == HIGH:
-            score += 1.5
+        score += scoring[rank+"Points"]['firstBlood']
     #first tower
     try:
         if response["participants"][playerNumber-1]["stats"]["firstTowerKill"] or response["participants"][playerNumber-1]["stats"]["firstTowerAssist"] == True:
-            score += 1
+            score += scoring[rank+"Points"]['firstTower']
 
     except:
         print("no towers taken")
@@ -198,7 +217,7 @@ def getScore(response, summonerName, rank):
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
             if response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0:
-                score +=1
+                score += scoring[rank+"Points"]['expPerMinVsOpp']
                 print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
             # else:
             #     count += -1
@@ -213,7 +232,7 @@ def getScore(response, summonerName, rank):
         try:
             for x in range(0,round(gameTime-gameTime%10), 10):
                 if response["participants"][playerNumber-1]["timeline"]["xpPerMinDeltas"][str(x)+"-"+str(x+10)] >= 450 and role != "Support":
-                    score +=1
+                    score +=scoring[rank+"Points"]['expPerMinVsOpp']
 
         except:
             print("no xp per min data")
@@ -222,7 +241,7 @@ def getScore(response, summonerName, rank):
     try:
         for x in range(0,round(gameTime-gameTime%10), 10):
             if response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"][str(x)+"-"+str(x+10)] > 450 and role != "Support":
-                score +=1
+                score +=scoring[rank+"Points"]['goldPerMinVsOpp']
         #     else:
         #         count += -1
         # if count > 0:
@@ -240,7 +259,7 @@ def getScore(response, summonerName, rank):
                 count += -1
                 response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)]
         if count > 0:
-            score += 2
+            score += scoring[rank+"Points"]['csPerMinVsOpp']
             print("2 points earned for cs per min vs opp ")
     except:
         print("no CS per min vs opp")
@@ -249,7 +268,7 @@ def getScore(response, summonerName, rank):
         try:
             for x in range(0,round(gameTime-gameTime%10), 10):
                 if response["participants"][playerNumber-1]["timeline"]["creepsPerMinDeltas"][str(x)+"-"+str(x+10)] > 6.5 and role != "Support":
-                    score +=1
+                    score +=scoring[rank+"Points"]['csPerMinVsOpp']
 
         except:
             print("no cs per min data")
