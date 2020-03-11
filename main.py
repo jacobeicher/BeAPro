@@ -6,14 +6,17 @@ import os
 import platform
 import sys
 import tkinter as tk
+import datetime
 
 
 wins = 0
 LOW = 0
 HIGH = 1
 
-def getRank(summonerID, APIKey):#league-V4
-    URL = "https://na1.api.riotgames.com/lol/league/v4/entries/by-summoner/" + summonerID+ "?api_key=" + APIKey
+
+def getRank(summonerID, APIKey):  # league-V4
+    URL = "https://na1.api.riotgames.com/lol/league/v4/entries/by-summoner/" + \
+        summonerID + "?api_key=" + APIKey
     response = requests.get(URL)
     response = response.json()
     global LOW
@@ -26,45 +29,69 @@ def getRank(summonerID, APIKey):#league-V4
     finally:
         return HIGH
 
-def getSummonerID(summonerName, APIKey):#summonerv4
-    URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + summonerName + "?api_key=" + APIKey
-    #print (URL)
+
+def getSummonerID(summonerName, APIKey):  # summonerv4
+    URL = "https://na1.api.riotgames.com/lol/summoner/v4/summoners/by-name/" + \
+        summonerName + "?api_key=" + APIKey
+    # print (URL)
     response = requests.get(URL)
     response = response.json()
-    #print(response)
-    #print("")
+    # print(response)
+    # print("")
     try:
-        return [response["accountId"],response["id"]]
+        return [response["accountId"], response["id"]]
     except:
         print(response)
         sys.exit()
 
-def getGameID(ID, APIKey):#matchv4 420 = ranked, 400 = normal draft, 700 = clash
-    URL = "https://na1.api.riotgames.com/lol/match/v4/matchlists/by-account/"+ID+"?queue=" + "420" +"&api_key="+APIKey
-    #print (URL)
+
+def getGameID(ID, APIKey):  # matchv4 420 = ranked, 400 = normal draft, 700 = clash
+    URL = "https://na1.api.riotgames.com/lol/match/v4/matchlists/by-account/" + \
+        ID+"?queue=" + "420" + "&api_key="+APIKey
+    # print (URL)
     response = requests.get(URL)
     response = response.json()
-    ts = round(time.time())
+    #standardizing time of program run
+
+    dt = datetime.datetime.now()
+    if dt.strftime("%A") == "Sunday":
+        dayValue = dt.day
+        dt = dt.replace(day=(dayValue+1), hour=0, minute=0, second=0)
+        
+    elif dt.strftime("%A") == "Monday":
+        dt = dt.replace(hour=0, minute=0, second=0)
+        
+    else:
+        dayValue = dt.day
+        # print("No Time correction applied")
+
+    ts = datetime.datetime.timestamp(dt)
+    ts= round(ts)
+    # print("This scoring is taking place at ", dt.strftime("%A %B %d %I:%M:%S %p"))
+     # - 60*60*numOfHours
     gamesGrabbed = 0
-    #print("time is " + str(ts))
+    # print("time is " + str(ts))
     lastMatch = response["endIndex"]
-    for x in range (1,lastMatch+1):
-        daysAgo = (ts - round(response["matches"][lastMatch - x]['timestamp']/1000))/(60*60*24)
+    for x in range(1, lastMatch+1):
+        daysAgo = (
+            ts - round(response["matches"][lastMatch - x]['timestamp']/1000))/(60*60*24)
         if(daysAgo <= 7):
             gamesGrabbed += 1
-            #(response["matches"][lastMatch - x])
+            # (response["matches"][lastMatch - x])
             print("")
             if(gamesGrabbed == 2):
-                return [g1,response["matches"][lastMatch - x]["gameId"]]
+                return [g1, response["matches"][lastMatch - x]["gameId"]]
             else:
                 g1 = response["matches"][lastMatch - x]["gameId"]
     if gamesGrabbed == 1:
-        return [g1,"DEFAULT"]
+        return [g1, "DEFAULT"]
     else:
-        return ["DEFAULT","DEFAULT"]
+        return ["DEFAULT", "DEFAULT"]
+
 
 def getGameData(gameID, APIKey):
-    URL = "https://na1.api.riotgames.com/lol/match/v4/matches/" + str(gameID) +"?api_key=" + APIKey
+    URL = "https://na1.api.riotgames.com/lol/match/v4/matches/" + \
+        str(gameID) + "?api_key=" + APIKey
     response = requests.get(URL)
     return response.json()
 
@@ -73,14 +100,14 @@ def getScore(response, summonerName, rank):
     global wins
     global LOW
     global HIGH
-    #print(response)
-    for x in range(0,10):
+    # print(response)
+    for x in range(0, 10):
         if(response["participantIdentities"][x]["player"]["summonerName"].lower()) == summonerName.lower():
             playerNumber = x+1
-    team = 0 if playerNumber <= 5 else  1
+    team = 0 if playerNumber <= 5 else 1
 
     score = 0
-    gameTime = round(response["gameDuration"]/60,1) # in mins
+    gameTime = round(response["gameDuration"]/60, 1)  # in mins
     role = response["participants"][playerNumber-1]["timeline"]["lane"]
     if role == "BOTTOM":
         if response["participants"][playerNumber-1]["timeline"]["role"] == "DOU_SUPPORT":
@@ -88,102 +115,106 @@ def getScore(response, summonerName, rank):
         else:
             role = "ADC"
     elif role == "NONE":
-        role ="Jungle"
-    #print(response["participants"][playerNumber-1])
+        role = "Jungle"
+    # print(response["participants"][playerNumber-1])
 
-    #print(response["teams"][team])
+    # print(response["teams"][team])
     if rank == LOW:
         score += response["teams"][team]["baronKills"]/2
 
-            
-    #kda
+    # kda
     if response["participants"][playerNumber-1]["stats"]["deaths"] != 0:
-        kda = (response["participants"][playerNumber-1]["stats"]["kills"] + response["participants"][playerNumber-1]["stats"]["assists"])/response["participants"][playerNumber-1]["stats"]["deaths"]
+        kda = (response["participants"][playerNumber-1]["stats"]["kills"] + response["participants"]
+               [playerNumber-1]["stats"]["assists"])/response["participants"][playerNumber-1]["stats"]["deaths"]
     else:
-        kda = (response["participants"][playerNumber-1]["stats"]["kills"] + response["participants"][playerNumber-1]["stats"]["assists"])
+        kda = (response["participants"][playerNumber-1]["stats"]["kills"] +
+               response["participants"][playerNumber-1]["stats"]["assists"])
         if rank == LOW:
-            score +=1
+            score += 1
     if rank == LOW:
         if kda >= 3.5:
-            score +=1 
+            score += 1
             if kda >= 4.5:
-                score +=2
+                score += 2
     elif rank == HIGH:
         if kda >= 3.5:
-            score +=1.5 
+            score += 1.5
             if kda >= 4.5:
-                score +=3
-    #wins
+                score += 3
+    # wins
     if(response["participants"][playerNumber-1]["stats"]["win"]):
         score += 5
-        wins +=1
-    #killing spree
+        wins += 1
+    # killing spree
     if response["participants"][playerNumber-1]["stats"]["largestKillingSpree"] >= 7 and rank == LOW or response["participants"][playerNumber-1]["stats"]["largestKillingSpree"] >= 8 and rank == HIGH:
-        score +=1
-    #multiKill
+        score += 1
+    # multiKill
     if response["participants"][playerNumber-1]["stats"]["largestMultiKill"] == 5:
         score += 5
-    #dmg Per Min - champions
+    # dmg Per Min - champions
     if rank == LOW:
         if response["participants"][playerNumber-1]["stats"]["totalDamageDealtToChampions"]/gameTime >= 1000:
             score += 1
     if rank == HIGH:
         if response["participants"][playerNumber-1]["stats"]["totalDamageDealtToChampions"]/gameTime >= 1150:
             score += 2
-    #Dmg per min - objectives
+    # Dmg per min - objectives
     if response["participants"][playerNumber-1]["stats"]["damageDealtToObjectives"]/gameTime >= 500:
         if rank == LOW:
             score += 1
-    #vision Score
+    # vision Score
     if response["participants"][playerNumber-1]["stats"]["visionScore"] >= 50:
-        score +=1
+        score += 1
         if role == "Support":
-            score +=1.5
+            score += 1.5
         if response["participants"][playerNumber-1]["stats"]["visionScore"] > 100 and role == "Support":
             score += 1
-    #crowd control score
+    # crowd control score
     if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] >= 35:
         score += 1
         if response["participants"][playerNumber-1]["stats"]["timeCCingOthers"] > 55:
             score += 1
-    #healing
+    # healing
     if response["participants"][playerNumber-1]["stats"]["totalHeal"] >= 2500 and role == "Support":
-            score +=1
-    #control wards
+        score += 1
+    # control wards
     if rank == LOW:
         if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 4:
-            score +=1
+            score += 1
             if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 6:
                 score += 2
     if rank == HIGH:
         if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 4:
-            score +=1
+            score += 1
             if response["participants"][playerNumber-1]["stats"]["visionWardsBoughtInGame"] >= 7:
                 score += 2
-    #wards placed
-    
+    # wards placed
+
     if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 15:
-        score +=1
+        score += 1
     if rank == LOW:
         if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 25:
-            score +=1.5
+            score += 1.5
     if rank == HIGH:
         if response["participants"][playerNumber-1]["stats"]["wardsPlaced"] >= 25:
-            score +=2
-    #wards killed
+            score += 2
+    # wards killed
     if response["participants"][playerNumber-1]["stats"]["wardsKilled"] >= 20:
         if rank == LOW:
-            score +=2
+            score += 2
         if rank == HIGH:
-            score +=1 
+            score += 1
         if role == "Support" and response["participants"][playerNumber-1]["stats"]["wardsKilled"] >= 25:
-            score +=1
-    #first blood
-    if response["participants"][playerNumber-1]["stats"]["firstBloodKill"] or response["participants"][playerNumber-1]["stats"]["firstBloodAssist"] == True:
-        score += 1
-        if rank == HIGH:
-            score += 1.5
-    #first tower
+            score += 1
+    # first blood
+    try:
+        if response["participants"][playerNumber-1]["stats"]["firstBloodKill"] or response["participants"][playerNumber-1]["stats"]["firstBloodAssist"] == True:
+            score += 1
+            if rank == HIGH:
+                score += 1.5
+    except:
+        print("no first blood")
+    # first tower
     try:
         if response["participants"][playerNumber-1]["stats"]["firstTowerKill"] or response["participants"][playerNumber-1]["stats"]["firstTowerAssist"] == True:
             score += 1
@@ -191,15 +222,14 @@ def getScore(response, summonerName, rank):
     except:
         print("no towers taken")
 
-
         count = 0
 
-    #xp per min vs opponent
+    # xp per min vs opponent
     try:
-        for x in range(0,round(gameTime-gameTime%10), 10):
+        for x in range(0, round(gameTime-gameTime % 10), 10):
             if response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0:
-                score +=1
-                print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
+                score += 1
+                #print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
             # else:
             #     count += -1
             #     print(response["participants"][playerNumber-1]["timeline"]["xpDiffPerMinDeltas"][str(x)+"-"+str(x+10)])
@@ -207,65 +237,70 @@ def getScore(response, summonerName, rank):
             #     score += 1
             #     print("1 point earned for xp per min vs opp ")
     except:
-        print("no xp per min")
-        #xp per min
+        # print("no xp per min")
+        # xp per min
         count = 0
         try:
-            for x in range(0,round(gameTime-gameTime%10), 10):
+            for x in range(0, round(gameTime-gameTime % 10), 10):
                 if response["participants"][playerNumber-1]["timeline"]["xpPerMinDeltas"][str(x)+"-"+str(x+10)] >= 450 and role != "Support":
-                    score +=1
+                    score += 1
 
         except:
-            print("no xp per min data")
-    #gold per min
+            t = 3
+           # print("no xp per min data")
+    # gold per min
     count = 0
     try:
-        for x in range(0,round(gameTime-gameTime%10), 10):
+        for x in range(0, round(gameTime-gameTime % 10), 10):
             if response["participants"][playerNumber-1]["timeline"]["goldPerMinDeltas"][str(x)+"-"+str(x+10)] > 450 and role != "Support":
-                score +=1
+                score += 1
         #     else:
         #         count += -1
         # if count > 0:
         #     score += 1
     except:
-        print("no gold per min data")
-    #cs per min vs opponent
+        t = 3
+        # print("no gold per min data")
+    # cs per min vs opponent
     count = 0
     try:
-        for x in range(0,round(gameTime-gameTime%10), 10):
+        for x in range(0, round(gameTime-gameTime % 10), 10):
             if response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)] > 0 and role != "Support":
-                count +=1
-                response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)]
+                count += 1
+                response["participants"][playerNumber -
+                                         1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)]
             else:
                 count += -1
-                response["participants"][playerNumber-1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)]
+                response["participants"][playerNumber -
+                                         1]["timeline"]["csDiffPerMinDeltas"][str(x)+"-"+str(x+10)]
         if count > 0:
             score += 2
-            print("2 points earned for cs per min vs opp ")
+            #print("2 points earned for cs per min vs opp ")
     except:
-        print("no CS per min vs opp")
-        #cs per min
+        # print("no CS per min vs opp")
+        # cs per min
         count = 0
         try:
-            for x in range(0,round(gameTime-gameTime%10), 10):
+            for x in range(0, round(gameTime-gameTime % 10), 10):
                 if response["participants"][playerNumber-1]["timeline"]["creepsPerMinDeltas"][str(x)+"-"+str(x+10)] > 6.5 and role != "Support":
-                    score +=1
+                    score += 1
 
         except:
-            print("no cs per min data")
-    #print(response["participants"][playerNumber-1])
+            t = 3
+            # print("no cs per min data")
+    # print(response["participants"][playerNumber-1])
     print(str(kda) + " as " + str(response["participants"][playerNumber-1]["championId"]))
     print("score as \"champion\" " + str(score))
+    print("")
     return score
 
 
 def toSheet(score, score2, data, data2, summonerName, row, record, wb, sheet):
 
-
-
-    style = xlwt.easyxf('align: horiz center; borders: left thin, right thin, top thin, bottom thin;')
-    sheet.write(row,0, summonerName, style)
-    sheet.write(row,1, record, style)
+    style = xlwt.easyxf(
+        'align: horiz center; borders: left thin, right thin, top thin, bottom thin;')
+    sheet.write(row, 0, summonerName, style)
+    sheet.write(row, 1, record, style)
     sheet.write(row, 2, score+score2, style)
 
     wb.save("Results.xls")
@@ -285,12 +320,12 @@ def main():
         setPlayers['highlightbackground'] = 'blue'
         root.after(200, reset_color)
 
-        input = PlayerFile.get("1.0",'end-1c')
+        input = PlayerFile.get("1.0", 'end-1c')
         if(len(sys.argv) > 1 and ("-specific" in sys.argv[1] or "-s" in sys.argv[1])):
-            f= open("sPlayers.txt","w+")
+            f = open("sPlayers.txt", "w+")
             f.write(input)
         else:
-            f= open("players.txt","w+")
+            f = open("players.txt", "w+")
             f.write(input)
         f.close()
 
@@ -299,7 +334,7 @@ def main():
         root.destroy()
         sys.exit(0)
 
-    #setting up GUI
+    # setting up GUI
 
     root = tk.Tk()
     root.protocol("WM_DELETE_WINDOW", on_closing)
@@ -307,30 +342,29 @@ def main():
     btn_text = tk.StringVar()
 
     btn_text.set("Run")
-    #player List
-    PlayerFile = tk.Text(root, width=45, height= 20)
+    # player List
+    PlayerFile = tk.Text(root, width=45, height=20)
 
     with open("players.txt", 'r') as f:
         PlayerFile.insert(tk.END, f.read())
 
-    #labels
-    label = tk.Label(root, text = "The Players")
+    # labels
+    label = tk.Label(root, text="The Players")
 
-    placeHolder = tk.Label(root, text = "   ")
+    placeHolder = tk.Label(root, text="   ")
 
     placeHolder.configure(background='lightgrey')
 
     label.configure(background='lightgrey')
-    #buttons
+    # buttons
     setPlayers = tk.Button(root, text="Save Changes", command=saveChanges)
     btnRun = tk.Button(root, textvariable=btn_text, command=clear)
 
     label.pack()
     PlayerFile.pack(fill="none", expand=True)
-    setPlayers.config(bg = 'lightgrey')
+    setPlayers.config(bg='lightgrey')
     setPlayers.pack()
     btnRun.pack()
-
 
     root.geometry("550x400+200+150")
     if(len(sys.argv) > 1 and ("-auto" in sys.argv[1] or "-a" in sys.argv[1])):
@@ -340,14 +374,14 @@ def main():
 
     # GUI end
 
-    row =0
-    file = open("players.txt","r")
+    row = 0
+    file = open("players.txt", "r")
     names = file.readlines()
     file.close()
     global wins
 
     wb = xlwt.Workbook()
-    sheet = wb.add_sheet("sheet1")#formatting sheet
+    sheet = wb.add_sheet("sheet1")  # formatting sheet
     for i in range(0, 17):
         sheet.col(i).width = 256*30
 
@@ -355,13 +389,13 @@ def main():
         summonerName = names.pop(0).strip()
         print(summonerName + " is current player")
 
-        file = open("apikey.txt","r")
+        file = open("apikey.txt", "r")
         APIKey = file.read()
         file.close()
 
         ids = getSummonerID(summonerName, APIKey)
 
-        accountID  = ids[0]
+        accountID = ids[0]
         summonerID = ids[1]
         rank = getRank(summonerID, APIKey)
         games = getGameID(accountID, APIKey)
@@ -380,15 +414,15 @@ def main():
             score2 = 0
             data2 = "NULL"
 
-
         if wins == 2:
             record = ("2,0")
         elif wins == 1:
-            record =("1,1")
+            record = ("1,1")
         else:
             record = ("0,2")
 
-        toSheet(score, score2, data, data2, summonerName, row, record, wb, sheet)
+        toSheet(score, score2, data, data2,
+                summonerName, row, record, wb, sheet)
         row += 1
         wins = 0
 
